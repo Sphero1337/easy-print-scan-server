@@ -1,12 +1,12 @@
 import gradio as gr
 import os
-import subprocess
 from datetime import datetime
 import win32print
 import win32api
-import yaml
 from functools import partial
 from .utils import load_config, ensure_directories, check_auth
+import app.scanner as scanner
+from PIL import Image
 
 class PrinterScannerApp:
     def __init__(self):
@@ -14,59 +14,58 @@ class PrinterScannerApp:
         ensure_directories(self.config)
         self.setup_app()
 
-    def print_file(self, username, file):
-        if not username:
+    def print_file(self, username, files):
+        if self.config['server']['auth_enabled'] and not username:
             return "Authentication required"
             
         try:
-            file_path = os.path.join(
-                self.config['storage']['upload_dir'], 
-                file.name
-            )
+            for file in files:
+                # Check file extension
+                _, ext = os.path.splitext(file.name)
+                if ext.lower() not in self.config['printing']['allowed_extensions']:
+                    return f"File type {ext} not allowed"
+                
+                # Get printer
+                printer = (self.config['printing']['default_printer'] or 
+                        win32print.GetDefaultPrinter())
+                
+                # Print file
+                win32api.ShellExecute(
+                    0,
+                    "print",
+                    file,
+                    f'/d:"{printer}"',
+                    ".",
+                    0
+                )
             
-            # Check file extension
-            _, ext = os.path.splitext(file.name)
-            if ext.lower() not in self.config['printing']['allowed_extensions']:
-                return f"File type {ext} not allowed"
-
-            # Save the uploaded file
-            with open(file_path, "wb") as f:
-                f.write(file.read())
-            
-            # Get printer
-            printer = (self.config['printing']['default_printer'] or 
-                      win32print.GetDefaultPrinter())
-            
-            # Print file
-            win32api.ShellExecute(
-                0,
-                "print",
-                file_path,
-                f'/d:"{printer}"',
-                ".",
-                0
-            )
-            
-            return f"File sent to printer: {printer}"
+            return f"Files sent to printer: {printer}"
         
         except Exception as e:
             return f"Error printing file: {str(e)}"
 
-    def scan_document(self, username):
-        if not username:
+    def scan_document(self, username, colormode):
+        if self.config['server']['auth_enabled'] and not username:
             return "Authentication required"
             
         try:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             output_file = os.path.join(
                 self.config['storage']['scan_dir'],
-                f"scan_{timestamp}.{self.config['scanning']['default_format']}"
+                f"scan_{timestamp}.jpg"
             )
             
-            scan_command = f'start ms-screenclip:'
-            subprocess.run(scan_command, shell=True)
+            ok, msg = scanner.scan_document_without_selection(self.config['scanning']["device_num"], output_file, colormode)
             
-            return output_file
+            if not ok:
+                return msg, None
+            
+            # load the image to add it into preview
+            image = Image.open(output_file)
+            pdfPath = output_file.replace(".jpg", ".pdf")
+            image.save(pdfPath, "PDF", resolution=300.0)
+
+            return [output_file, pdfPath], image
         
         except Exception as e:
             return f"Error scanning document: {str(e)}"
@@ -121,7 +120,7 @@ class PrinterScannerApp:
             gr.Markdown("# Document Printing and Scanning Service")
             
             with gr.Tab("Print Document"):
-                file_input = gr.File(label="Upload file to print")
+                file_input = gr.File(label="Upload files to print", file_count='multiple')
                 print_button = gr.Button("Print")
                 print_output = gr.Textbox(label="Status")
                 print_button.click(
@@ -131,12 +130,20 @@ class PrinterScannerApp:
                 )
             
             with gr.Tab("Scan Document"):
-                scan_button = gr.Button("Start Scan")
-                scan_output = gr.File(label="Scanned Document")
+                with gr.Row():
+                    with gr.Column():
+                        scan_button = gr.Button("Start Scan")
+                        color_dropdown = gr.Dropdown(choices=[
+                            ("Grayscale ca 12s", 2),
+                            ("Color 17s", 1), 
+                            ("Black and White 6s", 4)])
+                    with gr.Column():
+                        scan_output = gr.File(label="Document Download")
+                scan_image = gr.Image(label="File Preview")
                 scan_button.click(
                     fn=partial(self.scan_document),
-                    inputs=[username_state],
-                    outputs=scan_output
+                    inputs=[username_state, color_dropdown],
+                    outputs=[scan_output, scan_image]
                 )
 
     def run(self):

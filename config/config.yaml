@@ -1,8 +1,8 @@
-  server:
+server:
   host: "0.0.0.0"  # Use 0.0.0.0 for external access
   port: 7860
   external_access: false  # Set to true to enable external access
-  auth_enabled: true     # Set to false to disable authentication
+  auth_enabled: false     # Set to false to disable authentication
   username: "admin"      # Change this in production
   password: "admin123"   # Change this in production
   ssl_enabled: false     # Set to true to enable HTTPS
@@ -14,14 +14,15 @@ storage:
   scan_dir: "scanned_files"
 
 printing:
-  default_printer: ""  # Leave empty to use system default
+  default_printer: "Samsung SCX-3200 Series"  # Leave empty to use system default
   allowed_extensions:
     - .pdf
     - .doc
     - .docx
     - .txt
+    - .csv
+    - .jpg
+    - .png
 
 scanning:
-  default_format: "pdf"
-  resolution: 300
-  color_mode: "color"  # color or grayscale
+  device_num: 0
