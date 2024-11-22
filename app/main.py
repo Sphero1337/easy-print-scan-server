@@ -65,7 +65,7 @@ class PrinterScannerApp:
             pdfPath = output_file.replace(".jpg", ".pdf")
             image.save(pdfPath, "PDF", resolution=300.0)
 
-            return [output_file, pdfPath], image
+            return [output_file, pdfPath], image, "Scan completed successfully"
         
         except Exception as e:
             return None, None, [f"Error scanning document: {str(e)}"]
