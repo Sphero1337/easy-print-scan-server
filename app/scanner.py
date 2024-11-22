@@ -15,10 +15,7 @@ def scan_document_without_selection(device_num, target_file_path, ImageMode=Imag
         # Connect to the scanner using the Device ID
         
         device = wia_manager.DeviceInfos[device_num].Connect()
-        
-        if len(wia_manager.DeviceInfos) < device_num - 1:
-            return "No device with device num %d found. Check scanner device index!" % device_num
-        
+
         # Get the first item from the scanner
         item = device.Items[0]
         
@@ -38,6 +35,9 @@ def scan_document_without_selection(device_num, target_file_path, ImageMode=Imag
         image.SaveFile(target_file_path)
         return True, f"Document scanned and saved to {target_file_path}"
     
+    except IndexError as e:
+        return False, "Scanner on index not found, check connection or index."
+
     except Exception as e:
         return False, f"Error: {e}"
 

@@ -58,7 +58,7 @@ class PrinterScannerApp:
             ok, msg = scanner.scan_document_without_selection(self.config['scanning']["device_num"], output_file, colormode)
             
             if not ok:
-                return msg, None
+                return None, None, msg
             
             # load the image to add it into preview
             image = Image.open(output_file)
@@ -68,7 +68,7 @@ class PrinterScannerApp:
             return [output_file, pdfPath], image
         
         except Exception as e:
-            return f"Error scanning document: {str(e)}"
+            return None, None, [f"Error scanning document: {str(e)}"]
 
     def setup_app(self):
         self.app = gr.Blocks()
@@ -132,18 +132,19 @@ class PrinterScannerApp:
             with gr.Tab("Scan Document"):
                 with gr.Row():
                     with gr.Column():
-                        scan_button = gr.Button("Start Scan")
                         color_dropdown = gr.Dropdown(choices=[
-                            ("Grayscale ca 12s", 2),
-                            ("Color 17s", 1), 
-                            ("Black and White 6s", 4)])
+                            ("Grayscale (ca 12s)", 2),
+                            ("Color (ca 17s)", 1), 
+                            ("Black and White (ca 6s)", 4)])
+                        scan_button = gr.Button("Start Scan")
                     with gr.Column():
                         scan_output = gr.File(label="Document Download")
+                scan_result = gr.Textbox(label="Scan Result")
                 scan_image = gr.Image(label="File Preview")
                 scan_button.click(
                     fn=partial(self.scan_document),
                     inputs=[username_state, color_dropdown],
-                    outputs=[scan_output, scan_image]
+                    outputs=[scan_output, scan_image, scan_result]
                 )
 
     def run(self):
