@@ -12,7 +12,7 @@ A simple web interface for printing and scanning documents using Windows native 
 
 ## Requirements
 
-- Windows 10 Pro
+- Windows Host
 - Python 3.7+
 - A connected printer and scanner (or all-in-one device)
 
@@ -20,8 +20,8 @@ A simple web interface for printing and scanning documents using Windows native 
 
 1. **Clone the repository**:
     ```bash
-    git clone https://gitlab.com/yourusername/printer-scanner-web.git
-    cd printer-scanner-web
+    git clone https://github.com/Sphero1337/easy-print-scan-server.git
+    cd easy-print-scan-server
     ```
 
 2. **Create and activate a virtual environment**:
@@ -83,6 +83,7 @@ Edit the `config/config.yaml` file to customize the following settings:
 
 - This application supports Windows hosts only.
 - It uses the default printer unless a specific printer is specified in the configuration.
+- The hosts must be able to open the respective documents in order to print them, e.g. if you want to print an excel document, the appropriate software must be installed on the host machine.
 - The scanning functionality utilizes Microsoft Windows' native applications.
 
 ## Contributing
@@ -100,7 +101,7 @@ This project is licensed under the MIT License. See the LICENSE file for details
 ## Acknowledgments
 
 - Thanks to the Gradio team for the wonderful web interface library.
-- Special mention to Windows for providing native printing and scanning capabilities.
+- Also big thanks to OpenAI for providing free access to ChatGPT which was used to assist in developing this application.
 
 ## Security Features
 
