@@ -48,6 +48,21 @@ A simple web interface for printing and scanning documents using native OS funct
     sudo apt-get install cups cups-bsd sane-utils
     ```
 
+### Optional: one-step Debian/Ubuntu service install
+
+For Debian/Ubuntu systems, you can use the helper script to install all dependencies, create a dedicated user, set up a virtualenv, and provide next steps for configuring printers and scanners:
+
+```bash
+curl -s https://raw.githubusercontent.com/dodo8/easy-print-scan-server/main/install_debian.sh -o install_debian.sh
+chmod +x install_debian.sh
+./install_debian.sh
+```
+
+The script will:
+- Install Python, CUPS, and SANE tools.
+- Create or reuse the `easyprint` user and clone the repository into `/opt/easy-print-scan-server`.
+- Create a virtual environment, install Python dependencies (excluding Windows-only ones on Linux), and show how to start the app.
+
 ## Configuration
 
 Edit the `config/config.yaml` file to customize the following settings:
@@ -102,17 +117,30 @@ Edit the `config/config.yaml` file to customize the following settings:
 
 ## Usage
 
-1. **Start the application**:
-    ```bash
-    python run.py
-    ```
+1. **Discover printer and scanner parameters (recommended)**:
+  Use the helper script to list available printers and scanners and see how to pass them to `run.py`:
+  ```bash
+  source venv/bin/activate
+  python get_start_params.py
+  ```
 
-2. **Access the web interface**:
-   Open your web browser and navigate to `http://localhost:7860` (or your configured host/port).
+  - On Unix, this uses `lpstat -p` and `scanimage -L`.
+  - On Windows, this uses `pywin32` (WIA and printer APIs).
 
-3. **Functions in the Interface**:
-   - Upload and print documents.
-   - Scan documents using the scanning feature.
+2. **Start the application with explicit devices**:
+  ```bash
+  python run.py --printer "<PRINTER_NAME>" --scanner "<SCANNER_ID>"
+  ```
+
+  - On Unix, `<SCANNER_ID>` is the SANE device name (e.g. `genesys:libusb:001:002`).
+  - On Windows, `<SCANNER_ID>` is the numeric device index shown by `get_start_params.py`.
+
+3. **Access the web interface**:
+  Open your web browser and navigate to `http://localhost:7860` (or your configured host/port). If `server.port` is set to `0`, Gradio will choose a free port and print it in the console.
+
+4. **Functions in the Interface**:
+  - Upload and print documents.
+  - Scan documents using the scanning feature.
 
 ## Limitations
 

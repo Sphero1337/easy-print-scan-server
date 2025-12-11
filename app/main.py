@@ -6,16 +6,39 @@ from PIL import Image
 import sys
 
 from .utils import load_config, ensure_directories, check_auth
-from app.backends.windows_printing import WindowsPrintingBackend
-from app.backends.unix_printing import UnixPrintingBackend
-from app.backends.windows_scanning import WindowsScanningBackend
-from app.backends.unix_scanning import UnixScanningBackend
+
+# Import platform-specific backends conditionally so that
+# Windows-only dependencies are not required on Unix systems.
+if sys.platform.startswith("win"):
+    from app.backends.windows_printing import WindowsPrintingBackend
+    from app.backends.windows_scanning import WindowsScanningBackend
+else:
+    from app.backends.unix_printing import UnixPrintingBackend
+    from app.backends.unix_scanning import UnixScanningBackend
 
 
 class PrinterScannerApp:
-    def __init__(self):
+    def __init__(self, printer: str | None = None, scanner: str | None = None):
         self.config = load_config()
         ensure_directories(self.config)
+
+        # Allow overriding printer and scanner via command-line arguments
+        if printer:
+            self.config.setdefault('printing', {})
+            self.config['printing']['default_printer'] = printer
+
+        if scanner:
+            self.config.setdefault('scanning', {})
+            if sys.platform.startswith("win"):
+                # On Windows, scanner is the numerical device index
+                try:
+                    self.config['scanning']['device_num'] = int(scanner)
+                except ValueError:
+                    # If it's not an int, leave config as-is
+                    pass
+            else:
+                # On Unix, scanner is the SANE device name
+                self.config['scanning']['unix_device_name'] = scanner
 
         # Select platform-specific backends
         if sys.platform.startswith("win"):
@@ -158,10 +181,17 @@ class PrinterScannerApp:
                 "ssl_keyfile": self.config['server']['ssl_key']
             }
 
-        self.app.launch(
-            server_name=self.config['server']['host'],
-            server_port=self.config['server']['port'],
-            auth=None,  # We're handling auth ourselves
-            share=self.config['server']['external_access'],
-            **ssl_config
-        )
+        # If port is falsy (e.g. 0 or None), let Gradio choose a free port.
+        port = self.config['server'].get('port')
+
+        launch_kwargs = {
+            "server_name": self.config['server']['host'],
+            "auth": None,  # We're handling auth ourselves
+            "share": self.config['server']['external_access'],
+            **ssl_config,
+        }
+
+        if port:
+            launch_kwargs["server_port"] = port
+
+        self.app.launch(**launch_kwargs)
