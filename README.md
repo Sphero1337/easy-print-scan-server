@@ -53,7 +53,7 @@ A simple web interface for printing and scanning documents using native OS funct
 For Debian/Ubuntu systems, you can use the helper script to install all dependencies, create a dedicated user, set up a virtualenv, and provide next steps for configuring printers and scanners:
 
 ```bash
-curl -s https://raw.githubusercontent.com/dodo8/easy-print-scan-server/main/install_debian.sh -o install_debian.sh
+curl -s https://raw.githubusercontent.com/Sphero1337/easy-print-scan-server/main/install_debian.sh -o install_debian.sh
 chmod +x install_debian.sh
 ./install_debian.sh
 ```
