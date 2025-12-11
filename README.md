@@ -48,6 +48,35 @@ A simple web interface for printing and scanning documents using native OS funct
     sudo apt-get install cups cups-bsd sane-utils
     ```
 
+### Configure printers and scanners on Unix
+
+To make sure your devices are visible to `lpstat` and `scanimage` (and therefore to `get_start_params.py` and this app):
+
+- **Printers (CUPS / lpstat)**
+  - Ensure the CUPS service is running:
+    ```bash
+    sudo systemctl enable cups
+    sudo systemctl start cups
+    ```
+  - Open the CUPS web UI (if enabled) at `http://<server-ip>:631`, add your printer, and print a test page.
+  - Verify that your printer shows up:
+    ```bash
+    lpstat -p
+    ```
+    The names listed here are what you pass as `--printer`.
+
+- **Scanners (SANE / scanimage)**
+  - Make sure your user is in the `scanner` group and re-login:
+    ```bash
+    sudo usermod -aG scanner "$USER"
+    ```
+  - Install the appropriate SANE backend package for your device (e.g. `libsane-hp`, `libsane-hpaio`, etc. depending on distro).
+  - Check that the scanner is detected:
+    ```bash
+    scanimage -L
+    ```
+    The `device` string (e.g. `genesys:libusb:001:002`) is what you pass as `--scanner` or put into `scanning.unix_device_name` in `config/config.yaml`.
+
 ### Optional: one-step Debian/Ubuntu service install
 
 For Debian/Ubuntu systems, you can use the helper script to install all dependencies, create a dedicated user, set up a virtualenv, and provide next steps for configuring printers and scanners:
