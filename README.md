@@ -1,20 +1,22 @@
 # Printer Scanner Web Interface
 
-A simple web interface for printing and scanning documents using Windows native functions. Built with Python and Gradio, this application aims to provide an intuitive interface for users to manage their printing and scanning tasks efficiently.
+A simple web interface for printing and scanning documents using native OS functions. Built with Python and Gradio, this application aims to provide an intuitive interface for users to manage their printing and scanning tasks efficiently.
 
 ## Features
 
 - **Upload and Print Documents**: Users can upload files and send them directly to the printer.
-- **Scan Documents**: Scan documents using native Windows scanning capabilities.
+- **Scan Documents**: Scan documents using platform-specific capabilities (Windows WIA, Unix SANE).
 - **User Authentication**: Basic authentication can be configured for secure access.
 - **Configurable Server Settings**: Customize server host, port, and other functionalities through configuration.
 - **External Access**: Option to enable the application for external access using SSL for secure connections.
 
 ## Requirements
 
-- Windows Host
 - Python 3.7+
 - A connected printer and scanner (or all-in-one device)
+- Supported hosts:
+  - **Windows** (uses pywin32 and WIA)
+  - **Unix/Linux** (uses CUPS `lp` and SANE `scanimage` CLI tools)
 
 ## Installation
 
@@ -24,15 +26,26 @@ A simple web interface for printing and scanning documents using Windows native 
     cd easy-print-scan-server
     ```
 
-2. **Create and activate a virtual environment**:
+2. **Create and activate a virtual environment (Windows example)**:
     ```bash
     python -m venv venv
     venv\Scripts\activate
     ```
 
+   On Unix:
+    ```bash
+    python3 -m venv venv
+    source venv/bin/activate
+    ```
+
 3. **Install required packages**:
     ```bash
     pip install -r requirements.txt
+    ```
+
+4. **Unix-only: Install CUPS and SANE tools** (example for Debian/Ubuntu):
+    ```bash
+    sudo apt-get install cups cups-bsd sane-utils
     ```
 
 ## Configuration
@@ -54,8 +67,30 @@ Edit the `config/config.yaml` file to customize the following settings:
       scan_dir: "path/to/scan_dir"
     ```
 
-- **Printing and Scanning Settings**:
-    Adjust settings to control functionality.
+- **Printing Settings**:
+    ```yaml
+    printing:
+      default_printer: ""          # Optional; if empty, use OS default
+      allowed_extensions:
+        - ".pdf"
+        - ".jpg"
+        - ".png"
+    ```
+
+- **Scanning Settings**:
+
+  On Windows:
+    ```yaml
+    scanning:
+      device_num: 0  # WIA device index
+    ```
+
+  On Unix:
+    ```yaml
+    scanning:
+      unix_device_name: "epson2:libusb:001:004"  # SANE device name from `scanimage -L`
+      resolution: 300
+    ```
 
 ### Default Credentials
 - Username: `admin`
@@ -81,10 +116,9 @@ Edit the `config/config.yaml` file to customize the following settings:
 
 ## Limitations
 
-- This application supports Windows hosts only.
-- It uses the default printer unless a specific printer is specified in the configuration.
-- The hosts must be able to open the respective documents in order to print them, e.g. if you want to print an excel document, the appropriate software must be installed on the host machine.
-- The scanning functionality utilizes Microsoft Windows' native applications.
+- On Windows, the hosts must be able to open the respective documents in order to print them, e.g. if you want to print an excel document, the appropriate software must be installed on the host machine.
+- On Unix, printing uses the `lp` command (CUPS). Ensure printers are configured via CUPS and that `lp` is in PATH.
+- On Unix, scanning uses `scanimage` (SANE). Ensure scanners are configured and discoverable via `scanimage -L`.
 
 ## Contributing
 

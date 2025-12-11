@@ -1,78 +1,81 @@
 import gradio as gr
 import os
 from datetime import datetime
-import win32print
-import win32api
 from functools import partial
-from .utils import load_config, ensure_directories, check_auth
-import app.scanner as scanner
 from PIL import Image
+import sys
+
+from .utils import load_config, ensure_directories, check_auth
+from app.backends.windows_printing import WindowsPrintingBackend
+from app.backends.unix_printing import UnixPrintingBackend
+from app.backends.windows_scanning import WindowsScanningBackend
+from app.backends.unix_scanning import UnixScanningBackend
+
 
 class PrinterScannerApp:
     def __init__(self):
         self.config = load_config()
         ensure_directories(self.config)
+
+        # Select platform-specific backends
+        if sys.platform.startswith("win"):
+            self.print_backend = WindowsPrintingBackend(self.config)
+            self.scan_backend = WindowsScanningBackend(self.config)
+        else:
+            self.print_backend = UnixPrintingBackend(self.config)
+            self.scan_backend = UnixScanningBackend(self.config)
+
         self.setup_app()
 
     def print_file(self, username, files):
         if self.config['server']['auth_enabled'] and not username:
             return "Authentication required"
-            
+
         try:
+            file_paths = []
             for file in files:
                 # Check file extension
                 _, ext = os.path.splitext(file.name)
                 if ext.lower() not in self.config['printing']['allowed_extensions']:
                     return f"File type {ext} not allowed"
-                
-                # Get printer
-                printer = (self.config['printing']['default_printer'] or 
-                        win32print.GetDefaultPrinter())
-                
-                # Print file
-                win32api.ShellExecute(
-                    0,
-                    "print",
-                    file,
-                    f'/d:"{printer}"',
-                    ".",
-                    0
-                )
-            
-            return f"Files sent to printer: {printer}"
-        
+
+                # Gradio's file objects expose a .name which is the temp file path
+                file_paths.append(file.name)
+
+            return self.print_backend.print_files(file_paths)
+
         except Exception as e:
             return f"Error printing file: {str(e)}"
 
     def scan_document(self, username, colormode):
         if self.config['server']['auth_enabled'] and not username:
             return "Authentication required"
-            
+
         try:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             output_file = os.path.join(
                 self.config['storage']['scan_dir'],
                 f"scan_{timestamp}.jpg"
             )
-            
-            ok, msg = scanner.scan_document_without_selection(self.config['scanning']["device_num"], output_file, colormode)
-            
+
+            ok, msg = self.scan_backend.scan_document(colormode, output_file)
+
             if not ok:
                 return None, None, msg
-            
+
             # load the image to add it into preview
             image = Image.open(output_file)
             pdfPath = output_file.replace(".jpg", ".pdf")
             image.save(pdfPath, "PDF", resolution=300.0)
 
             return [output_file, pdfPath], image, "Scan completed successfully"
-        
+
         except Exception as e:
             return None, None, [f"Error scanning document: {str(e)}"]
 
     def setup_app(self):
         self.app = gr.Blocks()
-        
+
         with self.app:
             username_state = gr.State(None)
 
@@ -118,7 +121,7 @@ class PrinterScannerApp:
                 )
 
             gr.Markdown("# Document Printing and Scanning Service")
-            
+
             with gr.Tab("Print Document"):
                 file_input = gr.File(label="Upload files to print", file_count='multiple')
                 print_button = gr.Button("Print")
@@ -128,13 +131,13 @@ class PrinterScannerApp:
                     inputs=[username_state, file_input],
                     outputs=print_output
                 )
-            
+
             with gr.Tab("Scan Document"):
                 with gr.Row():
                     with gr.Column():
                         color_dropdown = gr.Dropdown(choices=[
                             ("Grayscale (ca 12s)", 2),
-                            ("Color (ca 17s)", 1), 
+                            ("Color (ca 17s)", 1),
                             ("Black and White (ca 6s)", 4)])
                         scan_button = gr.Button("Start Scan")
                     with gr.Column():
